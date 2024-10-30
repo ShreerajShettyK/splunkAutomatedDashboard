@@ -275,8 +275,8 @@ func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardNa
 	}
 
 	// For debugging
-	fmt.Printf("Check dashboard response status: %s\n", resp.Status())
-	fmt.Printf("Check dashboard response body: %s\n", string(resp.Body()))
+	// fmt.Printf("Check dashboard response status: %s\n", resp.Status())
+	// fmt.Printf("Check dashboard response body: %s\n", string(resp.Body()))
 
 	return resp.StatusCode() == 200, nil
 }
@@ -300,24 +300,79 @@ func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) err
 		return fmt.Errorf("error checking dashboard existence: %v", err)
 	}
 
-	// Create dashboard XML
+	// Create dashboard XML with the new panels
 	dashboardXML := fmt.Sprintf(`<?xml version="1.0"?>
 		<dashboard version="1.1">
 			<label>%s Dashboard</label>
 			<row>
 				<panel>
-					<title>Log Events</title>
+					<title>Time Range Selector</title>
+					<input type="time" token="timeRange">
+						<label>Time Range</label>
+						<default>
+							<earliest>-24h</earliest>
+							<latest>now</latest>
+						</default>
+					</input>
+				</panel>
+			</row>
+			<row>
+				<panel>
+					<title>Login Success VS. Failure</title>
 					<chart>
 						<search>
-							<query>%s</query>
-							<earliest>-24h@h</earliest>
-							<latest>now</latest>
+							<query>index="user_management_api_dev" uri="/users/login" | eval login_status=if(response_code=200, "Success", "Failure") | stats count by login_status | eval login_status=if(login_status=="Success", "A_Success", "B_Failure") | sort login_status | eval login_status=replace(login_status, "A_", "") | eval login_status=replace(login_status, "B_", "")</query>
+							<earliest>$timeRange.earliest$</earliest>
+							<latest>$timeRange.latest$</latest>
 						</search>
-						<option name="charting.chart">column</option>
+					</chart>
+				</panel>
+				<panel>
+					<title>Response Codes Distribution</title>
+					<chart>
+						<search>
+							<query>index="user_management_api_dev" | stats count by response_code</query>
+							<earliest>$timeRange.earliest$</earliest>
+							<latest>$timeRange.latest$</latest>
+						</search>
+					</chart>
+				</panel>
+				</row>
+			<row>
+				<panel>
+					<title>Number of API Hits</title>
+					<chart>
+						<search>
+							<query>index="user_management_api_dev" | stats count as API_Hits</query>
+							<earliest>$timeRange.earliest$</earliest>
+							<latest>$timeRange.latest$</latest>
+						</search>
+					</chart>
+				</panel>
+				<panel>
+					<title>Most Active Endpoint</title>
+					<chart>
+						<search>
+							<query>index="user_management_api_dev" method=* uri=* | stats count by uri | sort -count | head 1</query>
+							<earliest>$timeRange.earliest$</earliest>
+							<latest>$timeRange.latest$</latest>
+						</search>
+					</chart>
+				</panel>
+				</row>
+			<row>
+				<panel>
+					<title>Average Response Time by URI</title>
+					<chart>
+						<search>
+							<query>index="user_management_api_dev" | stats avg(response_time) as avg_response_time by uri</query>
+							<earliest>$timeRange.earliest$</earliest>
+							<latest>$timeRange.latest$</latest>
+						</search>
 					</chart>
 				</panel>
 			</row>
-		</dashboard>`, dashboard.TeamName, dashboard.PanelQuery)
+		</dashboard>`, dashboard.TeamName)
 
 	// Prepare form data
 	formData := url.Values{}
