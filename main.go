@@ -303,10 +303,10 @@ func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) err
 	// Create dashboard XML with the new panels
 	dashboardXML := fmt.Sprintf(`<?xml version="1.0"?>
 		<dashboard version="1.1">
-			<label>%s Dashboard</label>
+			<label>%s Dashboard Updated</label>
 			<row>
 				<panel>
-					<title>Time Range Selector</title>
+					<title>Time Range Selector Updated</title>
 					<input type="time" token="timeRange">
 						<label>Time Range</label>
 						<default>
@@ -380,49 +380,118 @@ func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) err
 	formData.Set("eai:data", dashboardXML)
 	formData.Set("output_mode", "json")
 
-	var apiURL string
+	dashboardName := fmt.Sprintf("dashboard_%s", strings.ToLower(dashboard.TeamName))
+
 	if exists {
 		// Update existing dashboard
-		apiURL = fmt.Sprintf("%s/servicesNS/admin/search/data/ui/views/%s",
-			strings.TrimSuffix(splunk.BaseURL, "/"),
-			url.PathEscape(fmt.Sprintf("dashboard_%s", strings.ToLower(dashboard.TeamName))))
 		fmt.Println("Updating existing dashboard...")
-		resp, err := client.R().
-			SetHeader("Authorization", "Basic "+authToken).
-			SetHeader("Content-Type", "application/x-www-form-urlencoded").
-			SetBody(formData.Encode()).
-			Post(apiURL)
-
+		err = updateDashboard(client, splunk, dashboardName, dashboardXML, authToken)
 		if err != nil {
-			return fmt.Errorf("error making request to update dashboard: %v", err)
-		}
-
-		if resp.StatusCode() != 200 {
-			return fmt.Errorf("failed to update dashboard: %s - %s", resp.Status(), string(resp.Body()))
+			return fmt.Errorf("error updating dashboard: %v", err)
 		}
 	} else {
 		// Create new dashboard
-		apiURL = fmt.Sprintf("%s/servicesNS/admin/search/data/ui/views",
-			strings.TrimSuffix(splunk.BaseURL, "/"))
 		fmt.Println("Creating new dashboard...")
-		resp, err := client.R().
-			SetHeader("Authorization", "Basic "+authToken).
-			SetHeader("Content-Type", "application/x-www-form-urlencoded").
-			SetBody(formData.Encode()).
-			Post(apiURL)
-
+		err = createDashboard(client, splunk, dashboardName, dashboardXML, authToken)
 		if err != nil {
-			return fmt.Errorf("error making request to create dashboard: %v", err)
-		}
-
-		if resp.StatusCode() != 201 {
-			return fmt.Errorf("failed to create dashboard: %s - %s", resp.Status(), string(resp.Body()))
+			return fmt.Errorf("error creating dashboard: %v", err)
 		}
 	}
 
-	fmt.Printf("Dashboard successfully %s for %s\n",
-		map[bool]string{true: "updated", false: "created"}[exists],
-		dashboard.TeamName)
+	// Set dashboard permissions
+	err = setDashboardPermissions(client, splunk, dashboardName, authToken)
+	if err != nil {
+		return fmt.Errorf("error setting dashboard permissions: %v", err)
+	}
+
+	// fmt.Printf("Dashboard successfully %s for %s\n",
+	// 	map[bool]string{true: "updated", false: "created"}[exists],
+	// 	dashboard.TeamName)
+	return nil
+}
+
+// updateDashboard updates an existing Splunk dashboard
+func updateDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML, authToken string) error {
+	apiURL := fmt.Sprintf("%s/servicesNS/admin/search/data/ui/views/%s",
+		strings.TrimSuffix(splunk.BaseURL, "/"),
+		url.PathEscape(dashboardName))
+
+	formData := url.Values{}
+	formData.Set("name", dashboardName)
+	formData.Set("eai:data", dashboardXML)
+	formData.Set("output_mode", "json")
+
+	resp, err := client.R().
+		SetHeader("Authorization", "Basic "+authToken).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(formData.Encode()).
+		Put(apiURL)
+
+	if err != nil {
+		return fmt.Errorf("error making request to update dashboard: %v", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("failed to update dashboard: %s - %s", resp.Status(), string(resp.Body()))
+	}
+
+	return nil
+}
+
+// createDashboard creates a new Splunk dashboard
+func createDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML, authToken string) error {
+	apiURL := fmt.Sprintf("%s/servicesNS/admin/search/data/ui/views",
+		strings.TrimSuffix(splunk.BaseURL, "/"))
+
+	formData := url.Values{}
+	formData.Set("name", dashboardName)
+	formData.Set("eai:data", dashboardXML)
+	formData.Set("output_mode", "json")
+
+	resp, err := client.R().
+		SetHeader("Authorization", "Basic "+authToken).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(formData.Encode()).
+		Post(apiURL)
+
+	if err != nil {
+		return fmt.Errorf("error making request to create dashboard: %v", err)
+	}
+
+	if resp.StatusCode() != 201 {
+		return fmt.Errorf("failed to create dashboard: %s - %s", resp.Status(), string(resp.Body()))
+	}
+
+	return nil
+}
+
+// setDashboardPermissions sets read and write permissions for the dashboard
+func setDashboardPermissions(client *resty.Client, splunk SplunkConfig, dashboardName, authToken string) error {
+	permissionsURL := fmt.Sprintf("%s/servicesNS/admin/search/data/ui/views/%s/acl",
+		strings.TrimSuffix(splunk.BaseURL, "/"),
+		url.PathEscape(dashboardName))
+
+	// Set permissions
+	formData := url.Values{}
+	formData.Set("sharing", "app")
+	formData.Set("owner", "admin")
+	formData.Set("perms.read", "*")
+	formData.Set("perms.write", "admin")
+
+	resp, err := client.R().
+		SetHeader("Authorization", "Basic "+authToken).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(formData.Encode()).
+		Post(permissionsURL)
+
+	if err != nil {
+		return fmt.Errorf("error setting dashboard permissions: %v", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("failed to set dashboard permissions: %s - %s", resp.Status(), string(resp.Body()))
+	}
+
 	return nil
 }
 
