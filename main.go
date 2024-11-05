@@ -18,7 +18,7 @@ import (
 type SplunkConfig struct {
 	BaseURL string
 	Token   string
-	ApiPath string // New field for API path
+	ApiPath string
 }
 
 // DashboardConfig holds the dashboard configuration data.
@@ -27,7 +27,6 @@ type DashboardConfig struct {
 	Index    string
 }
 
-// checkDashboardExists checks if the dashboard already exists
 func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardName string) (bool, error) {
 	getDashboardURL := fmt.Sprintf("%s%s/%s",
 		strings.TrimSuffix(splunk.BaseURL, "/"),
@@ -37,7 +36,7 @@ func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardNa
 	getDashboardURL += "?output_mode=json"
 
 	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+splunk.Token). // Use token-based authorization
+		SetHeader("Authorization", "Bearer "+splunk.Token).
 		Get(getDashboardURL)
 
 	if err != nil {
@@ -47,7 +46,6 @@ func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardNa
 	return resp.StatusCode() == 200, nil
 }
 
-// loadDashboardTemplate reads the dashboard XML template from file
 func loadDashboardTemplate(filepath string) (string, error) {
 	content, err := os.ReadFile(filepath)
 	if err != nil {
@@ -56,25 +54,23 @@ func loadDashboardTemplate(filepath string) (string, error) {
 	return string(content), nil
 }
 
-// createOrUpdateDashboard handles both creation and updating of dashboards
 func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) error {
 	client := resty.New().
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
 		SetTimeout(30 * time.Second)
 
-	// Check if dashboard exists
 	exists, err := checkDashboardExists(client, splunk, dashboard.TeamName)
 	if err != nil {
 		return fmt.Errorf("error checking dashboard existence: %v", err)
 	}
 
-	template, err := loadDashboardTemplate("dashboard_template.xml")
+	template, err := loadDashboardTemplate("dashboard_template_json.xml")
 	if err != nil {
 		return fmt.Errorf("failed to load dashboard template: %v", err)
 	}
 
+	// Format the template with the team name
 	dashboardXML := fmt.Sprintf(template, dashboard.TeamName)
-
 	dashboardName := fmt.Sprintf("dashboard_%s", strings.ToLower(dashboard.TeamName))
 
 	if exists {
@@ -96,47 +92,19 @@ func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) err
 	return setDashboardPermissions(client, splunk, dashboardName)
 }
 
-// updateDashboard updates an existing Splunk dashboard
-func updateDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML string) error {
-	apiURL := fmt.Sprintf("%s%s/%s",
-		strings.TrimSuffix(splunk.BaseURL, "/"),
-		splunk.ApiPath,
-		url.PathEscape(dashboardName))
-
-	formData := url.Values{}
-	formData.Set("eai:data", dashboardXML)
-	formData.Set("output_mode", "json")
-
-	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+splunk.Token). // Use token-based authorization
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		SetBody(formData.Encode()).
-		Post(apiURL)
-
-	if err != nil {
-		return fmt.Errorf("error making request to update dashboard: %v", err)
-	}
-
-	if resp.StatusCode() != 200 {
-		return fmt.Errorf("failed to update dashboard: %s - %s", resp.Status(), string(resp.Body()))
-	}
-
-	return nil
-}
-
-// createDashboard creates a new Splunk dashboard
 func createDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML string) error {
 	apiURL := fmt.Sprintf("%s%s",
 		strings.TrimSuffix(splunk.BaseURL, "/"),
 		splunk.ApiPath)
 
+	// Create form data similar to the curl command
 	formData := url.Values{}
 	formData.Set("name", dashboardName)
-	formData.Set("eai:data", dashboardXML)
+	formData.Set("eai:data", strings.TrimSpace(dashboardXML)) // Trim any extra whitespace
 	formData.Set("output_mode", "json")
 
 	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+splunk.Token). // Use token-based authorization
+		SetHeader("Authorization", "Bearer "+splunk.Token).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		SetBody(formData.Encode()).
 		Post(apiURL)
@@ -152,7 +120,33 @@ func createDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, d
 	return nil
 }
 
-// setDashboardPermissions sets read and write permissions for the dashboard
+func updateDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML string) error {
+	apiURL := fmt.Sprintf("%s%s/%s",
+		strings.TrimSuffix(splunk.BaseURL, "/"),
+		splunk.ApiPath,
+		url.PathEscape(dashboardName))
+
+	formData := url.Values{}
+	formData.Set("eai:data", strings.TrimSpace(dashboardXML)) // Trim any extra whitespace
+	formData.Set("output_mode", "json")
+
+	resp, err := client.R().
+		SetHeader("Authorization", "Bearer "+splunk.Token).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(formData.Encode()).
+		Post(apiURL)
+
+	if err != nil {
+		return fmt.Errorf("error making request to update dashboard: %v", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("failed to update dashboard: %s - %s", resp.Status(), string(resp.Body()))
+	}
+
+	return nil
+}
+
 func setDashboardPermissions(client *resty.Client, splunk SplunkConfig, dashboardName string) error {
 	permissionsURL := fmt.Sprintf("%s%s/%s/acl",
 		strings.TrimSuffix(splunk.BaseURL, "/"),
@@ -166,7 +160,7 @@ func setDashboardPermissions(client *resty.Client, splunk SplunkConfig, dashboar
 	formData.Set("perms.write", "admin")
 
 	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+splunk.Token). // Use token-based authorization
+		SetHeader("Authorization", "Bearer "+splunk.Token).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		SetBody(formData.Encode()).
 		Post(permissionsURL)
@@ -180,12 +174,10 @@ func setDashboardPermissions(client *resty.Client, splunk SplunkConfig, dashboar
 	}
 
 	log.Println("Dashboard permissions set")
-
 	return nil
 }
 
 func main() {
-
 	// Load the Splunk token from Secrets Manager
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -198,13 +190,7 @@ func main() {
 	}
 
 	baseURL := os.Getenv("SPLUNK_BASE_URL")
-	token := os.Getenv("SPLUNK_TOKEN") // Using token from environment variables
 	apiPath := os.Getenv("SPLUNK_API_PATH")
-
-	if token == "" {
-		log.Println("Error: Splunk token not set in environment variables")
-		return
-	}
 
 	splunk := SplunkConfig{
 		BaseURL: baseURL,
