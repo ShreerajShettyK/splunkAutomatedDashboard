@@ -15,7 +15,7 @@
     </row>
     <row>
         <panel>
-            <title>Login Success VS. Failure updated</title>
+            <title>Login Success VS. Failure Chart</title>
             <chart>
                 <search>
                     <query>index="user_management_api_dev" uri="/users/login" | eval login_status=if(response_code=200, "Success", "Failure") | stats count by login_status | eval login_status=if(login_status=="Success", "A_Success", "B_Failure") | sort login_status | eval login_status=replace(login_status, "A_", "") | eval login_status=replace(login_status, "B_", "")</query>
