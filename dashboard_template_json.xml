@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="2" theme="dark">
     <label>%s Dashboard</label>
-    <description>Dashboard for %s</description>
+    <description>Dashboard through code</description>
     <definition><![CDATA[
 {
     "dataSources": {
