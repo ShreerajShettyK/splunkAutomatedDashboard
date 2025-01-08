@@ -27,33 +27,6 @@ type DashboardConfig struct {
 	Index    string
 }
 
-func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardName string) (bool, error) {
-	getDashboardURL := fmt.Sprintf("%s%s/%s",
-		strings.TrimSuffix(splunk.BaseURL, "/"),
-		splunk.ApiPath,
-		url.PathEscape(fmt.Sprintf("dashboard_%s", strings.ToLower(dashboardName))))
-
-	getDashboardURL += "?output_mode=json"
-
-	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+splunk.Token).
-		Get(getDashboardURL)
-
-	if err != nil {
-		return false, fmt.Errorf("error checking dashboard existence: %v", err)
-	}
-
-	return resp.StatusCode() == 200, nil
-}
-
-func loadDashboardTemplate(filepath string) (string, error) {
-	content, err := os.ReadFile(filepath)
-	if err != nil {
-		return "", fmt.Errorf("error reading dashboard template: %v", err)
-	}
-	return string(content), nil
-}
-
 func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) error {
 	client := resty.New().
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
@@ -90,6 +63,33 @@ func createOrUpdateDashboard(splunk SplunkConfig, dashboard DashboardConfig) err
 	}
 
 	return setDashboardPermissions(client, splunk, dashboardName)
+}
+
+func checkDashboardExists(client *resty.Client, splunk SplunkConfig, dashboardName string) (bool, error) {
+	getDashboardURL := fmt.Sprintf("%s%s/%s",
+		strings.TrimSuffix(splunk.BaseURL, "/"),
+		splunk.ApiPath,
+		url.PathEscape(fmt.Sprintf("dashboard_%s", strings.ToLower(dashboardName))))
+
+	getDashboardURL += "?output_mode=json"
+
+	resp, err := client.R().
+		SetHeader("Authorization", "Bearer "+splunk.Token).
+		Get(getDashboardURL)
+
+	if err != nil {
+		return false, fmt.Errorf("error checking dashboard existence: %v", err)
+	}
+
+	return resp.StatusCode() == 200, nil
+}
+
+func loadDashboardTemplate(filepath string) (string, error) {
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return "", fmt.Errorf("error reading dashboard template: %v", err)
+	}
+	return string(content), nil
 }
 
 func createDashboard(client *resty.Client, splunk SplunkConfig, dashboardName, dashboardXML string) error {
@@ -200,7 +200,7 @@ func main() {
 	}
 
 	dashboard := DashboardConfig{
-		TeamName: "Team1",
+		TeamName: "Splunk",
 		Index:    "user_management_api_dev",
 	}
 
