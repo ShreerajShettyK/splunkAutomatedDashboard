@@ -155,9 +155,10 @@ func setDashboardPermissions(client *resty.Client, splunk SplunkConfig, dashboar
 
 	formData := url.Values{}
 	formData.Set("sharing", "app")
-	formData.Set("owner", "admin")
-	formData.Set("perms.read", "splunkviewingrole")
-	formData.Set("perms.write", "admin")
+	formData.Set("owner", "leps")
+	formData.Set("perms.read", "*")
+	// formData.Set("perms.read", "splunkviewingrole")
+	formData.Set("perms.write", "leps")
 
 	resp, err := client.R().
 		SetHeader("Authorization", "Bearer "+splunk.Token).

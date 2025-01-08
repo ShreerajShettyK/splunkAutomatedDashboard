@@ -2,10 +2,12 @@ module dashboard
 
 go 1.22.3
 
-require github.com/go-resty/resty/v2 v2.15.3
+require (
+	github.com/aws/aws-sdk-go-v2 v1.32.3
+	github.com/go-resty/resty/v2 v2.15.3
+)
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.32.3 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.42 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.18 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.22 // indirect

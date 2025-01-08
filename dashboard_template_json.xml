@@ -85,7 +85,7 @@
                     "earliest": "$tr_6Wa3jQuc.earliest$",
                     "latest": "$tr_6Wa3jQuc.latest$"
                 },
-                "query": "index=\"user_management_api_dev\" \r\n| head 10\r\n| eval Time=strftime(_time, \"%A, %B %e, %Y %I:%M %p\") \r\n| fields Time, level, message, uri, method, response_code, response_time, error, user_id, token_issued, user_agent\r\n| fields - \"_raw\" \"_time\" \"_sourcetype\" \"_cd\" \"_bkt\" \"_index\" \"_serial\" \"_indextime\" \"user_agent\" \"_si\"\r\n"
+                "query": "index=\"user_management_api_dev\" \r\n| head 10 \r\n| table _time, level, message, uri, method, response_code, response_time, user_id, error"
             },
             "name": "Search_1"
         }

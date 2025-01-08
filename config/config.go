@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"dashboard/models" 
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -25,8 +26,8 @@ var SecretManagerFunc = func() (SecretsManagerInterface, error) {
 
 var loadAWSConfig = config.LoadDefaultConfig
 
-func LoadConfig() (*Config, error) {
-	secretName := "testing/splunkToken"
+func LoadConfig() (*models.Config, error) {
+	secretName := "testing"
 
 	svc, err := SecretManagerFunc()
 	if err != nil {
@@ -43,7 +44,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	secretString := *result.SecretString
-	config := &Config{}
+	config := &models.Config{}
 
 	err = json.Unmarshal([]byte(secretString), config)
 	if err != nil {
