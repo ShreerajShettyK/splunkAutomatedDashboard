@@ -6,8 +6,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/go-resty/resty/v2"
 	"dashboard/models"
+
+	"github.com/go-resty/resty/v2"
 )
 
 func CreateDashboard(client *resty.Client, splunk models.SplunkConfig, dashboardName, dashboardXML string) error {
@@ -64,9 +65,9 @@ func SetDashboardPermissions(client *resty.Client, splunk models.SplunkConfig, d
 
 	formData := url.Values{}
 	formData.Set("sharing", "app")
-	formData.Set("owner", "leps")
+	formData.Set("owner", "admin")
 	formData.Set("perms.read", "*")
-	formData.Set("perms.write", "leps")
+	formData.Set("perms.write", "admin")
 
 	resp, err := client.R().
 		SetHeader("Authorization", "Bearer "+splunk.Token).
