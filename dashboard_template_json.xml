@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <dashboard version="2" theme="dark">
-    <label>%s Dashboard</label>
+    <label>%s Automated Dashboard</label>
     <description>Dashboard through code</description>
     <definition><![CDATA[
 {
