@@ -2,13 +2,16 @@ package config
 
 import (
 	"context"
+	"dashboard/models"
 	"encoding/json"
 	"fmt"
-	"dashboard/models" 
+	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/joho/godotenv"
 )
 
 type SecretsManagerInterface interface {
@@ -27,7 +30,14 @@ var SecretManagerFunc = func() (SecretsManagerInterface, error) {
 var loadAWSConfig = config.LoadDefaultConfig
 
 func LoadConfig() (*models.Config, error) {
-	secretName := "testing"
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Error loading .env file: %v\n", err)
+	}
+
+	secretName := os.Getenv("SECRETS_MANAGER_NAME")
+
+	// secretName := "testing/splunkToken"
 
 	svc, err := SecretManagerFunc()
 	if err != nil {

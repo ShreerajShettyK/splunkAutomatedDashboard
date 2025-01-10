@@ -3,6 +3,7 @@ SPLUNK DASHBOARD CREATION THROUGH GOLANG:
 Add env file whith the below contents:
 SPLUNK_BASE_URL="https://127.0.0.1:8089"
 SPLUNK_API_PATH="/servicesNS/Nobody/search/data/ui/views"
+SECRETS_MANAGER_NAME="testing/splunkToken"
  
 
 Steps to run the code:
