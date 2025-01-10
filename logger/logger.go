@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,33 +20,30 @@ var (
 	Logger      = CreateLogger()
 )
 
-// check if log folder exists
+// // check if log folder exists
 func logFolderExists() {
 	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("Error getting current working directory: %v", err)
 	}
-	log.Println(wd)
-	parentDir := filepath.Dir(wd)
-	baseDir := filepath.Dir(parentDir)
-	_, err = os.Stat(filepath.Join(baseDir, "logger"))
-	if err != nil {
-		baseDir = filepath.Dir(baseDir)
-	}
-	log.Println(baseDir)
-	FolderPath = baseDir + "/logger/logs/"
-	logfolderErr := os.MkdirAll(FolderPath, os.ModePerm)
-	if logfolderErr != nil {
-		fmt.Println(logfolderErr)
+
+	FolderPath = filepath.Join(wd, "logger", "logs")
+	// fmt.Println("FolderPath:", FolderPath)
+
+	if err := os.MkdirAll(FolderPath, os.ModePerm); err != nil {
+		log.Fatalf("Error creating log folder: %v", err)
 	}
 }
 
-// create log file if not exist
 func createLogFile(filename string) *infraLogger {
-	file, _ := os.OpenFile(FolderPath+filename, os.O_RDWR|os.O_CREATE|os.O_APPEND|os.O_TRUNC, 0777)
+	file, err := os.OpenFile(filepath.Join(FolderPath, filename), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Error creating log file: %v", err)
+	}
+
 	return &infraLogger{
 		fileName: filename,
-		Logger:   log.New(file, time.Now().Format("2006-01-02 15:04:05")+": Log: ", log.Lshortfile),
+		Logger:   log.New(file, time.Now().Format("2006-01-02 15:04:05 ")+": Log: ", log.Lshortfile),
 	}
 }
 
