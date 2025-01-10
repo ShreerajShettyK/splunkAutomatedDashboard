@@ -2,24 +2,27 @@ package main
 
 import (
 	"dashboard/config"
+	"dashboard/logger"
 	"dashboard/models"
 	"dashboard/utils/dashboard"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 )
 
+var splunkLogger = logger.CreateLogger()
+
 func main() {
+	splunkLogger.Println("Starting Splunk Dashboard Setup")
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		splunkLogger.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v\n", err)
+		splunkLogger.Printf("Warning: Error loading .env file: %v\n", err)
 	}
 
 	baseURL := os.Getenv("SPLUNK_BASE_URL")
@@ -39,6 +42,6 @@ func main() {
 
 	// Run dashboard setup
 	if err := dashboard.RunDashboardSetup(splunkConfig, dashboardConfig); err != nil {
-		log.Fatalf("Dashboard setup failed: %v", err)
+		splunkLogger.Fatalf("Dashboard setup failed: %v", err)
 	}
 }
