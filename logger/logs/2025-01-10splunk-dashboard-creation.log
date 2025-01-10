@@ -1,0 +1,4 @@
+2025-01-10 17:32:48 : Log: main.go:16: Starting Splunk Dashboard Setup
+2025-01-10 17:32:48 : Log: dashboard_manager.go:57: Dashboard setup complete
+2025-01-10 17:43:57 : Log: main.go:16: Starting Splunk Dashboard Setup
+2025-01-10 17:43:57 : Log: dashboard_manager.go:57: Dashboard setup complete
