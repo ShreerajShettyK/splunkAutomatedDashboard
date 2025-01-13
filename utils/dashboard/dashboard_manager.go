@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"crypto/tls"
-	"dashboard/logger"
 	"dashboard/models"
 	"dashboard/utils/splunk"
 	"fmt"
@@ -13,8 +12,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 )
-
-var splunkLogger = logger.CreateLogger()
 
 func RunDashboardSetup(cfg *models.SplunkConfig, dashboardConfig *models.DashboardConfig) error {
 	client := resty.New().
@@ -54,6 +51,6 @@ func RunDashboardSetup(cfg *models.SplunkConfig, dashboardConfig *models.Dashboa
 		return fmt.Errorf("error setting dashboard permissions: %v", err)
 	}
 
-	splunkLogger.Println("Dashboard setup complete")
+	log.Println("Dashboard setup complete")
 	return nil
 }
